@@ -1,0 +1,5 @@
+Note: Due to LinkedIn's security policies, we cannot directly fetch and save profile pictures programmatically. Please manually:
+1. Visit your LinkedIn profile
+2. Right-click on your profile picture
+3. Save the image
+4. Move it to the portfolio's public directory as 'profile-pic.jpg'

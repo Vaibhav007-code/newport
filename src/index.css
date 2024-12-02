@@ -1,0 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #191919;
+  color: #ffffff;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  /* Notion-style scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 rounded-full dark:bg-gray-700;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-300 dark:bg-gray-600;
+  }
+}
+
+@layer components {
+  .section-container {
+    @apply container mx-auto px-6 md:px-12 py-24;
+  }
+
+  /* Notion-style card */
+  .notion-card {
+    @apply rounded-lg border transition-all duration-200 ease-in-out;
+  }
+
+  /* Notion-style button */
+  .notion-button {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 ease-in-out;
+  }
+}
+
+/* Notion-style transitions */
+.transition-notion {
+  transition: all 0.2s cubic-bezier(0.37, 0, 0.63, 1);
+}
+
+/* Notion-style hover effect */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.37, 0, 0.63, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Notion-style selection */
+::selection {
+  @apply bg-blue-100 dark:bg-blue-900;
+}
+
+/* Notion-style focus ring */
+.focus-notion {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
+}
+
+/* Notion-style divider */
+.divider-notion {
+  @apply h-px bg-gray-200 dark:bg-gray-800;
+}
+
+/* Notion-style typography */
+.heading-1 {
+  @apply text-4xl md:text-5xl font-bold tracking-tight;
+}
+
+.heading-2 {
+  @apply text-3xl md:text-4xl font-bold tracking-tight;
+}
+
+.heading-3 {
+  @apply text-2xl md:text-3xl font-semibold tracking-tight;
+}
+
+.body-large {
+  @apply text-lg leading-relaxed;
+}
+
+.body-regular {
+  @apply text-base leading-relaxed;
+}
+
+.caption {
+  @apply text-sm leading-normal;
+}
+
+/* Notion-style animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Notion-style code blocks */
+.code-block {
+  @apply font-mono text-sm bg-gray-100 dark:bg-gray-800 rounded-lg p-4;
+}
