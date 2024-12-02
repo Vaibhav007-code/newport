@@ -2,38 +2,54 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FiGithub, FiLinkedin, FiMail, FiArrowUpRight } from 'react-icons/fi';
 
-const Hero = () => {
+const Hero: React.FC = () => {
   return (
-    <section className="min-h-screen flex items-center py-20 bg-[#191919]">
-      <div className="container mx-auto px-6">
-        <div className="max-w-4xl mx-auto">
+    <motion.section 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8 }}
+      className="min-h-screen flex items-center justify-center bg-[#191919] px-4 sm:px-6 lg:px-8 py-16"
+    >
+      <div className="max-w-7xl mx-auto w-full">
+        <div className="flex flex-col items-center text-center space-y-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center space-y-8"
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="space-y-6"
           >
-            <h1 className="text-4xl md:text-6xl font-bold text-white font-inter tracking-tight">
+            <motion.h1 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="text-4xl sm:text-5xl md:text-6xl font-bold text-white"
+            >
               Hi, I'm{' '}
-              <span className="text-[#2eaadc]">
+              <span className="text-[#2eaadc] inline-block">
                 Vaibhav Pathak
               </span>
-            </h1>
-            <p className="text-xl md:text-2xl leading-relaxed text-gray-300 font-inter">
+            </motion.h1>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="text-lg sm:text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto"
+            >
               Full Stack Developer crafting elegant solutions through code.
               <span className="text-[#2eaadc]"> Available for new opportunities.</span>
-            </p>
+            </motion.p>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6"
+            transition={{ duration: 0.8, delay: 0.8 }}
+            className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6"
           >
             <a
               href="#projects"
-              className="bg-[#2a2a2a] border border-[#333333] px-6 py-3 rounded-lg text-white hover:bg-[#333333] transition-all duration-300 inline-flex items-center gap-2 font-inter group"
+              className="w-full sm:w-auto bg-[#2a2a2a] border border-[#333333] px-6 py-3 rounded-lg text-white hover:bg-[#333333] transition-all duration-300 inline-flex items-center justify-center gap-2 group"
             >
               <span>View Projects</span>
               <FiArrowUpRight className="w-5 h-5 text-[#2eaadc] transform transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
@@ -41,7 +57,7 @@ const Hero = () => {
             
             <a
               href="#contact"
-              className="bg-[#2a2a2a] border border-[#333333] px-6 py-3 rounded-lg text-white hover:bg-[#333333] transition-all duration-300 font-inter"
+              className="w-full sm:w-auto bg-[#2a2a2a] border border-[#333333] px-6 py-3 rounded-lg text-white hover:bg-[#333333] transition-all duration-300 text-center"
             >
               Contact Me
             </a>
@@ -50,8 +66,8 @@ const Hero = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-12 flex gap-8 justify-center"
+            transition={{ duration: 0.5, delay: 1 }}
+            className="flex items-center gap-6"
           >
             <a
               href="https://github.com/Vaibhav007-code"
@@ -60,11 +76,12 @@ const Hero = () => {
               className="text-gray-400 hover:text-[#2eaadc] transition-colors duration-300 group relative"
               aria-label="GitHub"
             >
-              <FiGithub size={24} />
+              <FiGithub className="w-6 h-6 sm:w-7 sm:h-7" />
               <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2a2a2a] text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                 GitHub
               </span>
             </a>
+
             <a
               href="https://www.linkedin.com/in/vaibhav-pathak-8b8991214/"
               target="_blank"
@@ -72,17 +89,18 @@ const Hero = () => {
               className="text-gray-400 hover:text-[#2eaadc] transition-colors duration-300 group relative"
               aria-label="LinkedIn"
             >
-              <FiLinkedin size={24} />
+              <FiLinkedin className="w-6 h-6 sm:w-7 sm:h-7" />
               <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2a2a2a] text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                 LinkedIn
               </span>
             </a>
+
             <a
               href="mailto:pathakvaibhav755@gmail.com"
               className="text-gray-400 hover:text-[#2eaadc] transition-colors duration-300 group relative"
               aria-label="Email"
             >
-              <FiMail size={24} />
+              <FiMail className="w-6 h-6 sm:w-7 sm:h-7" />
               <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-[#2a2a2a] text-white px-2 py-1 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                 Email
               </span>
@@ -90,7 +108,7 @@ const Hero = () => {
           </motion.div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 };
 
