@@ -1,24 +1,51 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
+import { io, Socket } from 'socket.io-client';
 
 interface Message {
-  id: number;
+  _id: string;
   name: string;
   email: string;
   message: string;
-  created_at: string;
+  read: boolean;
+  createdAt: string;
 }
 
 const Admin: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [password, setPassword] = useState('');
+  const [socket, setSocket] = useState<Socket | null>(null);
 
-  const handleLogin = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (isAuthorized) {
+      // Connect to WebSocket server
+      const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
+      
+      newSocket.on('connect', () => {
+        console.log('Admin connected to server');
+      });
+
+      newSocket.on('new-message', (message: Message) => {
+        setMessages(prev => [message, ...prev]);
+        toast.info(`New message from ${message.name}`);
+      });
+
+      setSocket(newSocket);
+
+      // Fetch existing messages
+      fetchMessages();
+
+      return () => {
+        newSocket.close();
+      };
+    }
+  }, [isAuthorized]);
+
+  const fetchMessages = async () => {
     try {
-      const response = await fetch('/api/admin/messages', {
+      const response = await fetch('/api/messages', {
         headers: {
           'Authorization': `Bearer ${password}`
         }
@@ -26,7 +53,27 @@ const Admin: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setMessages(data.messages);
+        setMessages(data);
+      } else {
+        throw new Error('Failed to fetch messages');
+      }
+    } catch (error) {
+      toast.error('Failed to fetch messages');
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/messages', {
+        headers: {
+          'Authorization': `Bearer ${password}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data);
         setIsAuthorized(true);
         localStorage.setItem('adminSecret', password);
       } else {
@@ -35,16 +82,44 @@ const Admin: React.FC = () => {
     } catch (error) {
       toast.error('Failed to authenticate');
     }
-  }, [password]);
+  };
+
+  const markAsRead = async (messageId: string) => {
+    try {
+      const response = await fetch(`/api/messages/read/${messageId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${password}`
+        }
+      });
+
+      if (response.ok) {
+        const updatedMessage = await response.json();
+        setMessages(prev =>
+          prev.map(msg =>
+            msg._id === messageId ? { ...msg, read: true } : msg
+          )
+        );
+      }
+    } catch (error) {
+      toast.error('Failed to mark message as read');
+    }
+  };
+
+  const handleReply = async (messageId: string, email: string) => {
+    if (!socket) return;
+
+    socket.emit('admin-reply', { messageId, email });
+    window.location.href = `mailto:${email}?subject=Re: Portfolio Contact`;
+  };
 
   useEffect(() => {
     const savedSecret = localStorage.getItem('adminSecret');
     if (savedSecret) {
       setPassword(savedSecret);
-      const event = new Event('submit') as any;
-      handleLogin(event);
+      handleLogin(new Event('submit') as any);
     }
-  }, [handleLogin]);
+  }, []);
 
   if (!isAuthorized) {
     return (
@@ -85,6 +160,7 @@ const Admin: React.FC = () => {
               localStorage.removeItem('adminSecret');
               setIsAuthorized(false);
               setPassword('');
+              if (socket) socket.close();
             }}
             className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-300"
           >
@@ -94,10 +170,12 @@ const Admin: React.FC = () => {
         <div className="space-y-6">
           {messages.map((message) => (
             <motion.div
-              key={message.id}
+              key={message._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-[#2a2a2a] p-6 rounded-lg border border-[#333333]"
+              className={`bg-[#2a2a2a] p-6 rounded-lg border ${
+                message.read ? 'border-[#333333]' : 'border-[#2eaadc]'
+              }`}
             >
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -107,17 +185,25 @@ const Admin: React.FC = () => {
                   </a>
                 </div>
                 <span className="text-gray-400 text-sm">
-                  {new Date(message.created_at).toLocaleString()}
+                  {new Date(message.createdAt).toLocaleString()}
                 </span>
               </div>
               <p className="text-gray-300 whitespace-pre-wrap">{message.message}</p>
               <div className="mt-4 flex gap-4">
-                <a
-                  href={`mailto:${message.email}?subject=Re: Portfolio Contact`}
+                <button
+                  onClick={() => handleReply(message._id, message.email)}
                   className="inline-flex items-center px-4 py-2 bg-[#2eaadc] text-white rounded-lg hover:bg-[#2596c4] transition-colors duration-300"
                 >
-                  Reply via Email
-                </a>
+                  Reply
+                </button>
+                {!message.read && (
+                  <button
+                    onClick={() => markAsRead(message._id)}
+                    className="inline-flex items-center px-4 py-2 bg-[#333333] text-white rounded-lg hover:bg-[#444444] transition-colors duration-300"
+                  >
+                    Mark as Read
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}

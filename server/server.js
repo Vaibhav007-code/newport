@@ -26,16 +26,28 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Message Schema
 const messageSchema = new mongoose.Schema({
-  username: String,
-  email: String,
-  message: String,
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  message: { type: String, required: true },
+  read: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 
 const Message = mongoose.model('Message', messageSchema);
 
+// Admin authentication middleware
+const authenticateAdmin = async (req, res, next) => {
+  const adminToken = req.headers.authorization?.split(' ')[1];
+  
+  if (adminToken !== process.env.ADMIN_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  next();
+};
+
 // Routes
-app.get('/api/messages', async (req, res) => {
+app.get('/api/messages', authenticateAdmin, async (req, res) => {
   try {
     const messages = await Message.find().sort({ createdAt: -1 });
     res.json(messages);
@@ -44,21 +56,61 @@ app.get('/api/messages', async (req, res) => {
   }
 });
 
-app.post('/api/messages', async (req, res) => {
+app.post('/api/messages/read/:id', authenticateAdmin, async (req, res) => {
   try {
-    const { username, email, message } = req.body;
-    const newMessage = new Message({ username, email, message });
-    await newMessage.save();
-    io.emit('new-message', newMessage);
-    res.status(201).json(newMessage);
+    const message = await Message.findByIdAndUpdate(
+      req.params.id,
+      { read: true },
+      { new: true }
+    );
+    res.json(message);
   } catch (error) {
-    res.status(500).json({ error: 'Error saving message' });
+    res.status(500).json({ error: 'Error updating message' });
   }
 });
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
+
+  // Handle new message
+  socket.on('send-message', async (messageData) => {
+    try {
+      const { name, email, message } = messageData;
+      
+      // Save message to database
+      const newMessage = new Message({ name, email, message });
+      await newMessage.save();
+      
+      // Emit to admin clients only
+      socket.broadcast.emit('new-message', newMessage);
+      
+      // Acknowledge successful save
+      socket.emit('message-sent', { success: true });
+    } catch (error) {
+      console.error('Error saving message:', error);
+      socket.emit('message-sent', { 
+        success: false, 
+        error: 'Failed to send message' 
+      });
+    }
+  });
+
+  // Handle admin reply
+  socket.on('admin-reply', async ({ messageId, reply }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (message) {
+        // Here you could implement email sending logic for the reply
+        socket.emit('reply-sent', { success: true });
+      }
+    } catch (error) {
+      socket.emit('reply-sent', { 
+        success: false, 
+        error: 'Failed to send reply' 
+      });
+    }
+  });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);

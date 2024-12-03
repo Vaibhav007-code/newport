@@ -1,15 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiGithub, FiLinkedin, FiMail, FiSend } from 'react-icons/fi';
+import { FiGithub, FiLinkedin, FiMail } from 'react-icons/fi';
 import { toast } from 'react-toastify';
+import { io, Socket } from 'socket.io-client';
 
 const Contact: React.FC = () => {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     message: ''
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Connect to WebSocket server
+    const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
+    
+    newSocket.on('connect', () => {
+      console.log('Connected to server');
+    });
+
+    newSocket.on('message-sent', (response) => {
+      if (response.success) {
+        toast.success('Message sent successfully! I will get back to you soon.');
+        setFormData({ name: '', email: '', message: '' });
+      } else {
+        toast.error(response.error || 'Failed to send message');
+      }
+      setIsSubmitting(false);
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -21,45 +48,13 @@ const Contact: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      console.log('Sending message:', formData);
-      
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      console.log('Response data:', data);
-
-      if (!response.ok) {
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
-      }
-
-      if (data.success) {
-        toast.success('Message sent successfully!');
-        setFormData({ name: '', email: '', message: '' });
-      } else {
-        throw new Error(data.message || 'Failed to send message');
-      }
-    } catch (error) {
-      console.error('Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      
-      toast.error(error instanceof Error ? error.message : 'Failed to send message');
-    } finally {
-      setIsSubmitting(false);
+    if (!socket) {
+      toast.error('Unable to connect to server');
+      return;
     }
+
+    setIsSubmitting(true);
+    socket.emit('send-message', formData);
   };
 
   return (
@@ -148,12 +143,9 @@ const Contact: React.FC = () => {
 
               {/* Right Column - Contact Form */}
               <div>
-                <h3 className="text-2xl font-bold text-white mb-6">Send a Message</h3>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
-                      Name
-                    </label>
+                    <label htmlFor="name" className="block text-white mb-2">Name</label>
                     <input
                       type="text"
                       id="name"
@@ -161,15 +153,13 @@ const Contact: React.FC = () => {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:outline-none focus:border-[#2eaadc] transition-colors duration-300"
+                      className="w-full px-4 py-2 bg-[#333333] border border-[#444444] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2eaadc]"
                       placeholder="Your name"
                     />
                   </div>
-
+                  
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                      Email
-                    </label>
+                    <label htmlFor="email" className="block text-white mb-2">Email</label>
                     <input
                       type="email"
                       id="email"
@@ -177,15 +167,13 @@ const Contact: React.FC = () => {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:outline-none focus:border-[#2eaadc] transition-colors duration-300"
+                      className="w-full px-4 py-2 bg-[#333333] border border-[#444444] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2eaadc]"
                       placeholder="Your email"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">
-                      Message
-                    </label>
+                    <label htmlFor="message" className="block text-white mb-2">Message</label>
                     <textarea
                       id="message"
                       name="message"
@@ -193,7 +181,7 @@ const Contact: React.FC = () => {
                       onChange={handleChange}
                       required
                       rows={4}
-                      className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:outline-none focus:border-[#2eaadc] transition-colors duration-300"
+                      className="w-full px-4 py-2 bg-[#333333] border border-[#444444] rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2eaadc] resize-none"
                       placeholder="Your message"
                     />
                   </div>
@@ -201,16 +189,13 @@ const Contact: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-[#2eaadc] text-white px-6 py-3 rounded-lg font-medium hover:bg-[#2596c4] transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`w-full bg-[#2eaadc] text-white py-3 rounded-lg transition-all duration-300 ${
+                      isSubmitting
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:bg-[#2596c4] transform hover:translate-y-[-2px]'
+                    }`}
                   >
-                    {isSubmitting ? (
-                      'Sending...'
-                    ) : (
-                      <>
-                        <FiSend className="w-5 h-5" />
-                        <span>Send Message</span>
-                      </>
-                    )}
+                    {isSubmitting ? 'Sending...' : 'Send Message'}
                   </button>
                 </form>
               </div>
