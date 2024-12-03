@@ -24,10 +24,14 @@ const handler = async (req, res) => {
   }
 
   try {
+    // Log the raw request body for debugging
+    console.log('Raw request body:', req.body);
+
     // Ensure request body is properly parsed
     let body;
     try {
       body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      console.log('Parsed body:', body);
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
       return res.status(400).json({ 
@@ -43,6 +47,7 @@ const handler = async (req, res) => {
 
     // Validate input
     if (!name || !email || !message) {
+      console.log('Missing required fields:', { name: !!name, email: !!email, message: !!message });
       return res.status(400).json({ 
         success: false,
         message: 'All fields are required',
@@ -53,6 +58,7 @@ const handler = async (req, res) => {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.log('Invalid email format:', email);
       return res.status(400).json({ 
         success: false,
         message: 'Invalid email format'
@@ -60,6 +66,7 @@ const handler = async (req, res) => {
     }
 
     try {
+      console.log('Attempting to save to database...');
       // Prepare and execute the insert statement
       const stmt = db.prepare('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)');
       const result = stmt.run(name, email, message);
@@ -72,7 +79,11 @@ const handler = async (req, res) => {
         id: result.lastInsertRowid
       });
     } catch (dbError) {
-      console.error('Database error:', dbError);
+      console.error('Database error details:', {
+        error: dbError.message,
+        stack: dbError.stack,
+        code: dbError.code
+      });
       res.status(500).json({ 
         success: false,
         message: 'Failed to save message to database',
@@ -80,7 +91,11 @@ const handler = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error processing request:', error);
+    console.error('Error processing request details:', {
+      error: error.message,
+      stack: error.stack,
+      code: error.code
+    });
     res.status(500).json({ 
       success: false,
       message: 'Internal server error',
