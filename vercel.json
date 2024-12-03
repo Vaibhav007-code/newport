@@ -1,6 +1,5 @@
 {
   "version": 2,
-  // Updated configuration for combined frontend and backend deployment
   "builds": [
     {
       "src": "server/server.js",
@@ -9,9 +8,9 @@
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": { 
+      "config": {
         "distDir": "build",
-        "buildCommand": "npm run build"
+        "buildCommand": "npm run vercel-build"
       }
     }
   ],
@@ -44,5 +43,8 @@
       "src": "^/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "CI": "false"
+  }
 }
