@@ -24,6 +24,8 @@ const Contact: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      console.log('Sending message:', formData);
+      
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
@@ -33,10 +35,12 @@ const Contact: React.FC = () => {
         body: JSON.stringify(formData),
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to send message');
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
 
       if (data.success) {
@@ -46,7 +50,12 @@ const Contact: React.FC = () => {
         throw new Error(data.message || 'Failed to send message');
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
       toast.error(error instanceof Error ? error.message : 'Failed to send message');
     } finally {
       setIsSubmitting(false);
