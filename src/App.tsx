@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
@@ -65,34 +66,41 @@ function App() {
   }
 
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
-        <div className="min-h-screen bg-background-light dark:bg-background-dark transition-colors duration-300">
-          <Navbar />
-          <main className="pt-16">
-            <Hero />
-            <About />
-            <Projects />
-            <Contact />
-          </main>
-          <footer className="text-center py-6 text-gray-400">
-            <p> {new Date().getFullYear()} • Designed & Built by <span className="text-[#2eaadc]">Vaibhav</span></p>
-          </footer>
-          <ToastContainer
-            position="bottom-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="dark"
-          />
-        </div>
-      </ThemeProvider>
-    </ErrorBoundary>
+    <Router>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <div className="min-h-screen bg-background-light dark:bg-background-dark transition-colors duration-300">
+            <Navbar />
+            <Routes>
+              <Route path="/" element={
+                <main className="pt-16">
+                  <Hero />
+                  <About />
+                  <Projects />
+                  <Contact />
+                </main>
+              } />
+              <Route path="/admin" element={<Admin />} />
+            </Routes>
+            <footer className="text-center py-6 text-gray-400">
+              <p> {new Date().getFullYear()} • Designed & Built by <span className="text-[#2eaadc]">Vaibhav</span></p>
+            </footer>
+            <ToastContainer
+              position="bottom-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="dark"
+            />
+          </div>
+        </ThemeProvider>
+      </ErrorBoundary>
+    </Router>
   );
 }
 
