@@ -20,26 +20,49 @@ const Admin: React.FC = () => {
 
   useEffect(() => {
     if (isAuthorized) {
-      // Connect to WebSocket server
-      const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
-      
-      newSocket.on('connect', () => {
-        console.log('Admin connected to server');
-      });
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 5;
+      const reconnectDelay = 2000;
 
-      newSocket.on('new-message', (message: Message) => {
-        setMessages(prev => [message, ...prev]);
-        toast.info(`New message from ${message.name}`);
-      });
+      const connectSocket = () => {
+        const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+          reconnection: true,
+          reconnectionDelay: reconnectDelay,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: maxReconnectAttempts,
+        });
+        
+        newSocket.on('connect', () => {
+          console.log('Admin connected to server');
+          reconnectAttempts = 0;
+          fetchMessages(); // Fetch messages on successful connection
+        });
 
-      setSocket(newSocket);
+        newSocket.on('connect_error', (error) => {
+          console.error('Connection error:', error);
+          if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            setTimeout(connectSocket, reconnectDelay);
+          } else {
+            toast.error('Unable to connect to server. Please try refreshing the page.');
+          }
+        });
 
-      // Fetch existing messages
-      fetchMessages();
+        newSocket.on('new-message', (message: Message) => {
+          setMessages(prev => [message, ...prev]);
+          // Show notification with message preview
+          const preview = message.message.slice(0, 50) + (message.message.length > 50 ? '...' : '');
+          toast.info(`New message from ${message.name}: ${preview}`);
+        });
 
-      return () => {
-        newSocket.close();
+        setSocket(newSocket);
+
+        return () => {
+          newSocket.close();
+        };
       };
+
+      connectSocket();
     }
   }, [isAuthorized]);
 
@@ -107,10 +130,18 @@ const Admin: React.FC = () => {
   };
 
   const handleReply = async (messageId: string, email: string) => {
-    if (!socket) return;
+    if (!socket?.connected) {
+      toast.error('Connection lost. Please refresh the page.');
+      return;
+    }
 
-    socket.emit('admin-reply', { messageId, email });
-    window.location.href = `mailto:${email}?subject=Re: Portfolio Contact`;
+    try {
+      socket.emit('admin-reply', { messageId, email });
+      await markAsRead(messageId);
+      window.location.href = `mailto:${email}?subject=Re: Portfolio Contact`;
+    } catch (error) {
+      toast.error('Failed to process reply. Please try again.');
+    }
   };
 
   useEffect(() => {

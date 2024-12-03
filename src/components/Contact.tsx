@@ -7,6 +7,7 @@ import { io, Socket } from 'socket.io-client';
 const Contact: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [retryTimeout, setRetryTimeout] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -14,27 +15,70 @@ const Contact: React.FC = () => {
   });
 
   useEffect(() => {
-    // Connect to WebSocket server
-    const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
-    
-    newSocket.on('connect', () => {
-      console.log('Connected to server');
-    });
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 3;
+    const reconnectDelay = 5000; // 5 seconds
 
-    newSocket.on('message-sent', (response) => {
-      if (response.success) {
-        toast.success('Message sent successfully! I will get back to you soon.');
-        setFormData({ name: '', email: '', message: '' });
-      } else {
-        toast.error(response.error || 'Failed to send message');
-      }
-      setIsSubmitting(false);
-    });
+    const connectSocket = () => {
+      const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+        reconnection: true,
+        reconnectionAttempts: maxReconnectAttempts,
+        reconnectionDelay: reconnectDelay,
+        timeout: 10000,
+        transports: ['websocket', 'polling']
+      });
 
-    setSocket(newSocket);
+      newSocket.on('connect', () => {
+        console.log('Connected to server');
+        reconnectAttempts = 0;
+      });
+
+      newSocket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        if (reconnectAttempts < maxReconnectAttempts) {
+          reconnectAttempts++;
+          setTimeout(connectSocket, reconnectDelay * Math.pow(2, reconnectAttempts));
+        } else {
+          toast.error('Server connection failed. Please try again later.');
+        }
+      });
+
+      newSocket.on('message-sent', (response) => {
+        setIsSubmitting(false);
+        
+        if (response.success) {
+          toast.success(response.message || 'Message sent successfully!');
+          setFormData({ name: '', email: '', message: '' });
+          setRetryTimeout(null);
+        } else {
+          toast.error(response.error || 'Failed to send message');
+          
+          // Handle rate limiting
+          if (response.retryAfter) {
+            const retryAfter = response.retryAfter * 1000;
+            setRetryTimeout(Date.now() + retryAfter);
+            
+            // Clear retry timeout after it expires
+            setTimeout(() => {
+              setRetryTimeout(null);
+            }, retryAfter);
+          }
+        }
+      });
+
+      setSocket(newSocket);
+
+      return () => {
+        newSocket.close();
+      };
+    };
+
+    connectSocket();
 
     return () => {
-      newSocket.close();
+      if (socket) {
+        socket.close();
+      }
     };
   }, []);
 
@@ -48,8 +92,29 @@ const Contact: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!socket) {
-      toast.error('Unable to connect to server');
+
+    // Check if we're in a retry timeout period
+    if (retryTimeout && Date.now() < retryTimeout) {
+      const waitSeconds = Math.ceil((retryTimeout - Date.now()) / 1000);
+      toast.error(`Please wait ${waitSeconds} seconds before trying again`);
+      return;
+    }
+
+    // Validate form data
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (!socket?.connected) {
+      toast.error('Not connected to server. Trying to reconnect...');
       return;
     }
 
