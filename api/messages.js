@@ -17,27 +17,54 @@ const handler = async (req, res) => {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    return res.status(405).json({ 
+      success: false,
+      message: 'Method not allowed' 
+    });
   }
 
   try {
-    const { name, email, message } = req.body;
+    // Ensure request body is properly parsed
+    let body;
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid request body format'
+      });
+    }
+
+    const { name, email, message } = body;
+
+    // Log received data
+    console.log('Received data:', { name, email, message: message?.substring(0, 50) + '...' });
 
     // Validate input
     if (!name || !email || !message) {
-      return res.status(400).json({ message: 'All fields are required' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'All fields are required',
+        received: { name: !!name, email: !!email, message: !!message }
+      });
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: 'Invalid email format' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid email format'
+      });
     }
 
     try {
       // Prepare and execute the insert statement
       const stmt = db.prepare('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)');
       const result = stmt.run(name, email, message);
+
+      console.log('Message saved successfully:', result.lastInsertRowid);
 
       res.status(200).json({ 
         success: true,
@@ -48,14 +75,16 @@ const handler = async (req, res) => {
       console.error('Database error:', dbError);
       res.status(500).json({ 
         success: false,
-        message: 'Failed to save message to database'
+        message: 'Failed to save message to database',
+        error: process.env.NODE_ENV === 'development' ? dbError.message : undefined
       });
     }
   } catch (error) {
     console.error('Error processing request:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

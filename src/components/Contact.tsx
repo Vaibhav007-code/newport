@@ -28,6 +28,7 @@ const Contact: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(formData),
       });
@@ -39,13 +40,14 @@ const Contact: React.FC = () => {
       }
 
       if (data.success) {
-        toast.success('Message sent successfully! I will get back to you soon.');
+        toast.success('Message sent successfully!');
         setFormData({ name: '', email: '', message: '' });
       } else {
-        toast.error(data.message || 'Failed to send message');
+        throw new Error(data.message || 'Failed to send message');
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send message. Please try again.');
+      console.error('Error sending message:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send message');
     } finally {
       setIsSubmitting(false);
     }
