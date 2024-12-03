@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 
@@ -15,7 +15,7 @@ const Admin: React.FC = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [password, setPassword] = useState('');
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const response = await fetch('/api/admin/messages', {
@@ -35,15 +35,16 @@ const Admin: React.FC = () => {
     } catch (error) {
       toast.error('Failed to authenticate');
     }
-  };
+  }, [password]);
 
   useEffect(() => {
     const savedSecret = localStorage.getItem('adminSecret');
     if (savedSecret) {
       setPassword(savedSecret);
-      handleLogin(new Event('submit') as any);
+      const event = new Event('submit') as any;
+      handleLogin(event);
     }
-  }, []);
+  }, [handleLogin]);
 
   if (!isAuthorized) {
     return (
