@@ -8,8 +8,7 @@ const Admin: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Replace this with your actual password or better yet, implement proper authentication
-    if (password === 'your-admin-password') {
+    if (password === 'Vaibhav@123') {
       setIsAuthorized(true);
     } else {
       alert('Invalid password');
