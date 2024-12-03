@@ -15,6 +15,9 @@ const ContactForm: React.FC = () => {
 
     try {
       const apiUrl = process.env.REACT_APP_API_URL || '';
+      console.log('Sending message to:', `${apiUrl}/api/messages`);
+      console.log('Message data:', formData);
+
       const response = await fetch(`${apiUrl}/api/messages`, {
         method: 'POST',
         headers: {
@@ -23,12 +26,17 @@ const ContactForm: React.FC = () => {
         body: JSON.stringify(formData),
       });
 
-      if (response.ok) {
-        toast.success('Message sent successfully!');
-        setFormData({ name: '', email: '', message: '' });
-      } else {
-        toast.error('Failed to send message. Please try again.');
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Server response:', errorData);
+        throw new Error(`Server responded with ${response.status}: ${errorData}`);
       }
+
+      const responseData = await response.json();
+      console.log('Server response:', responseData);
+
+      toast.success('Message sent successfully!');
+      setFormData({ name: '', email: '', message: '' });
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message. Please try again.');

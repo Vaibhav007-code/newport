@@ -10,13 +10,15 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// Connect to MongoDB
+// Connect to MongoDB with error handling
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/portfolio', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-}).then(() => {
-  console.log('Connected to MongoDB successfully');
-}).catch((err) => {
+})
+.then(() => {
+  console.log('Successfully connected to MongoDB');
+})
+.catch((err) => {
   console.error('MongoDB connection error:', err);
 });
 
@@ -46,7 +48,7 @@ const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production'
       ? ['https://*.vercel.app', 'https://*.now.sh']
-      : 'http://localhost:3000',
+      : '*',
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -60,18 +62,27 @@ const io = new Server(server, {
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? ['https://*.vercel.app', 'https://*.now.sh']
-    : 'http://localhost:3000',
+    : '*',
   credentials: true
 }));
 app.use(express.json());
 
+// Debug middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`, req.body);
+  next();
+});
+
 // Message routes
 app.post('/api/messages', async (req, res) => {
+  console.log('Received message request:', req.body);
+  
   try {
     const { name, email, message } = req.body;
     
     // Validate input
     if (!name || !email || !message) {
+      console.log('Validation failed:', { name, email, message });
       return res.status(400).json({ error: 'All fields are required' });
     }
     
@@ -83,23 +94,34 @@ app.post('/api/messages', async (req, res) => {
       read: false
     });
 
+    console.log('Saving message:', newMessage);
+
     // Save message to MongoDB
-    await newMessage.save();
+    const savedMessage = await newMessage.save();
+    console.log('Message saved successfully:', savedMessage);
     
     // Emit the new message to all connected clients
-    io.emit('newMessage', newMessage);
+    io.emit('newMessage', savedMessage);
     
-    res.status(201).json({ message: 'Message sent successfully' });
+    res.status(201).json({ 
+      message: 'Message sent successfully',
+      data: savedMessage 
+    });
   } catch (error) {
     console.error('Error saving message:', error);
-    res.status(500).json({ error: 'Failed to save message' });
+    res.status(500).json({ 
+      error: 'Failed to save message',
+      details: error.message 
+    });
   }
 });
 
 // Get all messages
 app.get('/api/messages', async (req, res) => {
+  console.log('Fetching messages');
   try {
     const messages = await Message.find().sort({ createdAt: -1 });
+    console.log(`Found ${messages.length} messages`);
     res.json(messages);
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -109,6 +131,7 @@ app.get('/api/messages', async (req, res) => {
 
 // Mark message as read
 app.put('/api/messages/:id', async (req, res) => {
+  console.log('Marking message as read:', req.params.id);
   try {
     const message = await Message.findByIdAndUpdate(
       req.params.id,
@@ -116,8 +139,10 @@ app.put('/api/messages/:id', async (req, res) => {
       { new: true }
     );
     if (!message) {
+      console.log('Message not found:', req.params.id);
       return res.status(404).json({ error: 'Message not found' });
     }
+    console.log('Message marked as read:', message);
     res.json(message);
   } catch (error) {
     console.error('Error updating message:', error);
@@ -127,10 +152,10 @@ app.put('/api/messages/:id', async (req, res) => {
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log('Client connected');
+  console.log('Client connected:', socket.id);
   
   socket.on('disconnect', () => {
-    console.log('Client disconnected');
+    console.log('Client disconnected:', socket.id);
   });
 });
 
