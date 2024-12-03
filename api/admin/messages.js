@@ -22,7 +22,7 @@ const handler = async (req, res) => {
 
   // Check for admin authorization
   const authHeader = req.headers.authorization;
-  if (!authHeader || authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
+  if (!authHeader || authHeader !== `Bearer ${process.env.seceret_key}`) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
