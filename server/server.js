@@ -2,16 +2,37 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const mongoose = require('mongoose');
+const Database = require('better-sqlite3');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
+
+// Database setup
+const dbPath = process.env.NODE_ENV === 'production'
+  ? path.join(process.cwd(), 'messages.db')
+  : path.join(__dirname, 'messages.db');
+
+const db = new Database(dbPath, { verbose: console.log });
+
+// Create messages table if it doesn't exist
+db.exec(`
+  CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    message TEXT NOT NULL,
+    read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? process.env.VERCEL_URL 
+    origin: process.env.NODE_ENV === 'production'
+      ? [process.env.VERCEL_URL, process.env.REACT_APP_API_URL].filter(Boolean)
       : 'http://localhost:3000',
     methods: ['GET', 'POST'],
     credentials: true
@@ -23,8 +44,8 @@ const io = new Server(server, {
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.VERCEL_URL 
+  origin: process.env.NODE_ENV === 'production'
+    ? [process.env.VERCEL_URL, process.env.REACT_APP_API_URL].filter(Boolean)
     : 'http://localhost:3000',
   credentials: true
 }));
@@ -73,23 +94,6 @@ const cacheMiddleware = (req, res, next) => {
 app.use('/api/', limiter);
 app.use('/api/messages', cacheMiddleware);
 
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
-
-// Message Schema
-const messageSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  message: { type: String, required: true },
-  read: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
-});
-
-const Message = mongoose.model('Message', messageSchema);
-
 // Admin authentication middleware
 const authenticateAdmin = async (req, res, next) => {
   const adminToken = req.headers.authorization?.split(' ')[1];
@@ -104,7 +108,8 @@ const authenticateAdmin = async (req, res, next) => {
 // Routes with caching
 app.get('/api/messages', authenticateAdmin, async (req, res) => {
   try {
-    const messages = await Message.find().sort({ createdAt: -1 });
+    const stmt = db.prepare('SELECT * FROM messages ORDER BY created_at DESC');
+    const messages = stmt.all();
     
     // Cache the response
     messageCache.set(req.originalUrl, {
@@ -166,16 +171,22 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Save message with error handling
-      const newMessage = new Message({ name, email, message });
-      await newMessage.save();
+      // Save message to SQLite database
+      const stmt = db.prepare('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)');
+      const result = stmt.run(name, email, message);
       
       // Update rate limiting data
       messageCount++;
       lastMessageTime = now;
 
       // Broadcast to admin clients
-      socket.broadcast.emit('new-message', newMessage);
+      socket.broadcast.emit('new-message', {
+        id: result.lastInsertRowid,
+        name,
+        email,
+        message,
+        created_at: new Date().toISOString()
+      });
       
       socket.emit('message-sent', {
         success: true,
@@ -193,7 +204,8 @@ io.on('connection', (socket) => {
   // Handle admin reply
   socket.on('admin-reply', async ({ messageId, reply }) => {
     try {
-      const message = await Message.findById(messageId);
+      const stmt = db.prepare('SELECT * FROM messages WHERE id = ?');
+      const message = stmt.get(messageId);
       if (message) {
         // Here you could implement email sending logic for the reply
         socket.emit('reply-sent', { success: true });
