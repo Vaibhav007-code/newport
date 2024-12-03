@@ -20,7 +20,12 @@ const Contact: React.FC = () => {
     const reconnectDelay = 5000; // 5 seconds
 
     const connectSocket = () => {
-      const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000', {
+      // Get the current hostname
+      const currentHost = window.location.origin;
+      console.log('Connecting to:', currentHost);
+
+      const newSocket = io(currentHost, {
+        path: '/socket.io/',
         reconnection: true,
         reconnectionAttempts: maxReconnectAttempts,
         reconnectionDelay: reconnectDelay,

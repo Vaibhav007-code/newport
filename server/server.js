@@ -29,23 +29,26 @@ db.exec(`
   )
 `);
 
+// Socket.IO setup with proper CORS
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production'
-      ? [process.env.VERCEL_URL, process.env.REACT_APP_API_URL].filter(Boolean)
+      ? [process.env.VERCEL_URL, process.env.REACT_APP_API_URL, 'https://*.vercel.app'].filter(Boolean)
       : 'http://localhost:3000',
     methods: ['GET', 'POST'],
     credentials: true
   },
   path: '/socket.io/',
   transports: ['websocket', 'polling'],
-  allowEIO3: true
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? [process.env.VERCEL_URL, process.env.REACT_APP_API_URL].filter(Boolean)
+    ? [process.env.VERCEL_URL, process.env.REACT_APP_API_URL, 'https://*.vercel.app'].filter(Boolean)
     : 'http://localhost:3000',
   credentials: true
 }));
