@@ -16,14 +16,14 @@ const projects: Project[] = [
     description: "A collaborative learning platform that enables students to create and join study groups, share resources, and learn together in real-time. Features include live chat, resource sharing, and collaborative study tools.",
     technologies: ["React", "Node.js", "MongoDB", "Socket.io", "Express", "Tailwind CSS"],
     liveLink: "https://crap-for-you.onrender.com",
-    image: "/group-study.png"
+    image: "https://i.ibb.co/dWCQqLX/Screenshot-2024-12-03-224528.png"
   },
   {
     title: "Note Taking Application",
     description: "A feature-rich note-taking application with a clean, intuitive interface. Users can create, organize, and manage notes with rich text editing, tags, and categories. Built with modern web technologies for optimal performance.",
     technologies: ["React", "TypeScript", "Node.js", "MongoDB", "Express", "Tailwind CSS"],
     liveLink: "https://journal-dabria.vercel.app",
-    image: "/note-app.png"
+    image: "https://i.ibb.co/N2g3zNz/Screenshot-2024-12-03-224406.png"
   }
 ];
 
