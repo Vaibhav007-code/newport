@@ -7,7 +7,9 @@ import Hero from './components/Hero';
 import About from './components/About';
 import Projects from './components/Projects';
 import Contact from './components/Contact';
-import Messages from './components/Messages';
+import Admin from './components/Admin';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const LoadingScreen = () => {
   return (
@@ -26,8 +28,11 @@ const LoadingScreen = () => {
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Check if we're on the admin route
+    setIsAdmin(window.location.pathname === '/admin');
     // Simulate loading time
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
@@ -35,6 +40,28 @@ function App() {
 
   if (isLoading) {
     return <LoadingScreen />;
+  }
+
+  if (isAdmin) {
+    return (
+      <ErrorBoundary>
+        <ThemeProvider>
+          <Admin />
+          <ToastContainer
+            position="bottom-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="dark"
+          />
+        </ThemeProvider>
+      </ErrorBoundary>
+    );
   }
 
   return (
@@ -46,12 +73,23 @@ function App() {
             <Hero />
             <About />
             <Projects />
-            <Messages />
             <Contact />
           </main>
-          <footer className="text-center py-6 text-textSecondary-light dark:text-textSecondary-dark">
-            <p> {new Date().getFullYear()} Vaibhav Pathak. All rights reserved.</p>
+          <footer className="text-center py-6 text-gray-400">
+            <p> {new Date().getFullYear()} • Designed & Built by <span className="text-[#2eaadc]">Vaibhav</span></p>
           </footer>
+          <ToastContainer
+            position="bottom-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="dark"
+          />
         </div>
       </ThemeProvider>
     </ErrorBoundary>

@@ -1,8 +1,56 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiGithub, FiLinkedin, FiMail } from 'react-icons/fi';
+import { FiGithub, FiLinkedin, FiMail, FiSend } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 
 const Contact: React.FC = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send message');
+      }
+
+      if (data.success) {
+        toast.success('Message sent successfully! I will get back to you soon.');
+        setFormData({ name: '', email: '', message: '' });
+      } else {
+        toast.error(data.message || 'Failed to send message');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <motion.section
       initial={{ opacity: 0 }}
@@ -23,7 +71,7 @@ const Contact: React.FC = () => {
           Get in Touch
         </motion.h2>
 
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -31,76 +79,129 @@ const Contact: React.FC = () => {
             viewport={{ once: true }}
             className="bg-[#2a2a2a] rounded-xl p-8 md:p-10 shadow-xl border border-[#333333]"
           >
-            <div className="grid grid-cols-1 gap-8">
-              <div className="text-center">
-                <p className="text-gray-300 text-lg mb-8">
-                  I'm always open to new opportunities and collaborations. Feel free to reach out!
-                </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              {/* Left Column - Contact Info */}
+              <div className="space-y-8">
+                <div className="text-center md:text-left">
+                  <h3 className="text-2xl font-bold text-white mb-4">Let's Connect</h3>
+                  <p className="text-gray-300">
+                    Feel free to reach out through any of these platforms or send me a direct message.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  <a
+                    href="mailto:pathakvaibhav755@gmail.com"
+                    className="flex items-center gap-4 text-gray-300 hover:text-[#2eaadc] transition-colors duration-300 group"
+                  >
+                    <div className="w-12 h-12 bg-[#333333] rounded-lg flex items-center justify-center group-hover:bg-[#2eaadc] transition-colors duration-300">
+                      <FiMail className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">Email</p>
+                      <p className="text-sm">pathakvaibhav755@gmail.com</p>
+                    </div>
+                  </a>
+
+                  <a
+                    href="https://github.com/Vaibhav007-code"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-4 text-gray-300 hover:text-[#2eaadc] transition-colors duration-300 group"
+                  >
+                    <div className="w-12 h-12 bg-[#333333] rounded-lg flex items-center justify-center group-hover:bg-[#2eaadc] transition-colors duration-300">
+                      <FiGithub className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">GitHub</p>
+                      <p className="text-sm">View my projects</p>
+                    </div>
+                  </a>
+
+                  <a
+                    href="https://www.linkedin.com/in/vaibhav-pathak-8b8991214/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-4 text-gray-300 hover:text-[#2eaadc] transition-colors duration-300 group"
+                  >
+                    <div className="w-12 h-12 bg-[#333333] rounded-lg flex items-center justify-center group-hover:bg-[#2eaadc] transition-colors duration-300">
+                      <FiLinkedin className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">LinkedIn</p>
+                      <p className="text-sm">Connect with me</p>
+                    </div>
+                  </a>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <motion.a
-                  href="mailto:pathakvaibhav755@gmail.com"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  viewport={{ once: true }}
-                  className="flex flex-col items-center p-6 bg-[#333333] rounded-lg hover:bg-[#3a3a3a] transition-all duration-300 group"
-                >
-                  <div className="w-14 h-14 bg-[#2eaadc] bg-opacity-10 rounded-full flex items-center justify-center mb-4 group-hover:bg-opacity-20 transition-all duration-300">
-                    <FiMail className="w-7 h-7 text-[#2eaadc]" />
+              {/* Right Column - Contact Form */}
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-6">Send a Message</h3>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:outline-none focus:border-[#2eaadc] transition-colors duration-300"
+                      placeholder="Your name"
+                    />
                   </div>
-                  <h3 className="text-white font-medium mb-2">Email</h3>
-                  <p className="text-gray-400 text-sm text-center">pathakvaibhav755@gmail.com</p>
-                </motion.a>
 
-                <motion.a
-                  href="https://github.com/Vaibhav007-code"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  viewport={{ once: true }}
-                  className="flex flex-col items-center p-6 bg-[#333333] rounded-lg hover:bg-[#3a3a3a] transition-all duration-300 group"
-                >
-                  <div className="w-14 h-14 bg-[#2eaadc] bg-opacity-10 rounded-full flex items-center justify-center mb-4 group-hover:bg-opacity-20 transition-all duration-300">
-                    <FiGithub className="w-7 h-7 text-[#2eaadc]" />
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:outline-none focus:border-[#2eaadc] transition-colors duration-300"
+                      placeholder="Your email"
+                    />
                   </div>
-                  <h3 className="text-white font-medium mb-2">GitHub</h3>
-                  <p className="text-gray-400 text-sm text-center">View my projects</p>
-                </motion.a>
 
-                <motion.a
-                  href="https://www.linkedin.com/in/vaibhav-pathak-8b8991214/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  viewport={{ once: true }}
-                  className="flex flex-col items-center p-6 bg-[#333333] rounded-lg hover:bg-[#3a3a3a] transition-all duration-300 group"
-                >
-                  <div className="w-14 h-14 bg-[#2eaadc] bg-opacity-10 rounded-full flex items-center justify-center mb-4 group-hover:bg-opacity-20 transition-all duration-300">
-                    <FiLinkedin className="w-7 h-7 text-[#2eaadc]" />
+                  <div>
+                    <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">
+                      Message
+                    </label>
+                    <textarea
+                      id="message"
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
+                      required
+                      rows={4}
+                      className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:outline-none focus:border-[#2eaadc] transition-colors duration-300"
+                      placeholder="Your message"
+                    />
                   </div>
-                  <h3 className="text-white font-medium mb-2">LinkedIn</h3>
-                  <p className="text-gray-400 text-sm text-center">Let's connect</p>
-                </motion.a>
-              </div>
 
-              <div className="mt-8 text-center">
-                <motion.button
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  viewport={{ once: true }}
-                  onClick={() => window.location.href = 'mailto:pathakvaibhav755@gmail.com'}
-                  className="bg-[#2eaadc] text-white px-8 py-3 rounded-lg font-medium hover:bg-[#2596c4] transition-colors duration-300 inline-flex items-center gap-2"
-                >
-                  <FiMail className="w-5 h-5" />
-                  <span>Send me an email</span>
-                </motion.button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full bg-[#2eaadc] text-white px-6 py-3 rounded-lg font-medium hover:bg-[#2596c4] transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      'Sending...'
+                    ) : (
+                      <>
+                        <FiSend className="w-5 h-5" />
+                        <span>Send Message</span>
+                      </>
+                    )}
+                  </button>
+                </form>
               </div>
             </div>
           </motion.div>
