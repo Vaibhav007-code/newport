@@ -2,15 +2,44 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const db = require('./db');
+const mongoose = require('mongoose');
+const Message = require('../api/models/Message');
 require('dotenv').config();
 const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 
-// In-memory message store for development
-const messages = [];
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/portfolio', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => {
+  console.log('Connected to MongoDB successfully');
+}).catch((err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+// Handle MongoDB connection errors
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed through app termination');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during MongoDB shutdown:', err);
+    process.exit(1);
+  }
+});
 
 // Socket.IO setup with proper CORS
 const io = new Server(server, {
@@ -37,7 +66,7 @@ app.use(cors({
 app.use(express.json());
 
 // Message routes
-app.post('/api/messages', (req, res) => {
+app.post('/api/messages', async (req, res) => {
   try {
     const { name, email, message } = req.body;
     
@@ -46,24 +75,31 @@ app.post('/api/messages', (req, res) => {
       return res.status(400).json({ error: 'All fields are required' });
     }
     
-    // Insert message into database
-    const stmt = db.prepare('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)');
-    const result = stmt.run(name, email, message);
+    // Create new message
+    const newMessage = new Message({
+      name,
+      email,
+      message,
+      read: false
+    });
+
+    // Save message to MongoDB
+    await newMessage.save();
     
-    // Notify through socket if connected
-    io.emit('new-message', { id: result.lastInsertRowid });
+    // Emit the new message to all connected clients
+    io.emit('newMessage', newMessage);
     
-    res.json({ success: true, id: result.lastInsertRowid });
+    res.status(201).json({ message: 'Message sent successfully' });
   } catch (error) {
     console.error('Error saving message:', error);
     res.status(500).json({ error: 'Failed to save message' });
   }
 });
 
-// Get all messages (you might want to add authentication here)
-app.get('/api/messages', (req, res) => {
+// Get all messages
+app.get('/api/messages', async (req, res) => {
   try {
-    const messages = db.prepare('SELECT * FROM messages ORDER BY created_at DESC').all();
+    const messages = await Message.find().sort({ createdAt: -1 });
     res.json(messages);
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -72,77 +108,29 @@ app.get('/api/messages', (req, res) => {
 });
 
 // Mark message as read
-app.put('/api/messages/:id/read', (req, res) => {
+app.put('/api/messages/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const stmt = db.prepare('UPDATE messages SET read = 1 WHERE id = ?');
-    stmt.run(id);
-    res.json({ success: true });
+    const message = await Message.findByIdAndUpdate(
+      req.params.id,
+      { read: true },
+      { new: true }
+    );
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    res.json(message);
   } catch (error) {
     console.error('Error updating message:', error);
     res.status(500).json({ error: 'Failed to update message' });
   }
 });
 
-// Socket connection handling
+// Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  let messageCount = 0;
-  let lastMessageTime = Date.now();
-
-  socket.on('send-message', async (messageData) => {
-    try {
-      const now = Date.now();
-      const timeWindow = 60000; // 1 minute
-      if (now - lastMessageTime < timeWindow && messageCount >= 5) {
-        socket.emit('message-sent', {
-          success: false,
-          error: 'Please wait a moment before sending more messages.',
-          retryAfter: Math.ceil((lastMessageTime + timeWindow - now) / 1000)
-        });
-        return;
-      }
-
-      const { name, email, message } = messageData;
-      
-      if (!name?.trim() || !email?.trim() || !message?.trim()) {
-        socket.emit('message-sent', {
-          success: false,
-          error: 'All fields are required'
-        });
-        return;
-      }
-
-      // Store message
-      const newMessage = {
-        id: Date.now(),
-        name,
-        email,
-        message,
-        createdAt: new Date().toISOString()
-      };
-      messages.push(newMessage);
-      
-      messageCount++;
-      lastMessageTime = now;
-
-      socket.broadcast.emit('new-message', newMessage);
-      
-      socket.emit('message-sent', {
-        success: true,
-        message: 'Message sent successfully'
-      });
-    } catch (error) {
-      console.error('Error processing message:', error);
-      socket.emit('message-sent', {
-        success: false,
-        error: 'An error occurred. Please try again later.'
-      });
-    }
-  });
-
+  console.log('Client connected');
+  
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    console.log('Client disconnected');
   });
 });
 

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
+import io from 'socket.io-client';
 
 interface Message {
-  id: number;
+  _id: string;
   name: string;
   email: string;
   message: string;
-  created_at: string;
+  createdAt: string;
   read: boolean;
 }
 
@@ -16,9 +17,26 @@ const AdminMessages: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  useEffect(() => {
+    const socket = io(process.env.REACT_APP_API_URL || '', {
+      path: '/socket.io/',
+    });
+
+    socket.on('newMessage', (message: Message) => {
+      setMessages(prev => [message, ...prev]);
+      setUnreadCount(prev => prev + 1);
+      toast.success('New message received!');
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
   const fetchMessages = async () => {
     try {
-      const response = await fetch('/api/messages');
+      const apiUrl = process.env.REACT_APP_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/messages`);
       if (response.ok) {
         const data = await response.json();
         setMessages(data);
@@ -35,108 +53,91 @@ const AdminMessages: React.FC = () => {
     }
   };
 
-  const markAsRead = async (id: number) => {
+  const markAsRead = async (id: string) => {
     try {
-      const response = await fetch(`/api/messages/${id}/read`, {
+      const apiUrl = process.env.REACT_APP_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/messages/${id}`, {
         method: 'PUT',
       });
       if (response.ok) {
+        const updatedMessage = await response.json();
         setMessages(messages.map(msg => 
-          msg.id === id ? { ...msg, read: true } : msg
+          msg._id === id ? { ...msg, read: true } : msg
         ));
         setUnreadCount(prev => Math.max(0, prev - 1));
         toast.success('Message marked as read');
       }
     } catch (error) {
       console.error('Error marking message as read:', error);
-      toast.error('Failed to update message');
+      toast.error('Failed to mark message as read');
     }
   };
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[200px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl md:text-3xl font-bold text-white">Messages</h2>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-white">Messages ({messages.length})</h2>
         {unreadCount > 0 && (
-          <div className="bg-blue-500 text-white px-4 py-2 rounded-full animate-pulse">
-            {unreadCount} new message{unreadCount > 1 ? 's' : ''}
+          <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-sm">
+            {unreadCount} unread
+          </span>
+        )}
+      </div>
+      
+      <div className="space-y-4">
+        {messages.map((msg) => (
+          <div
+            key={msg._id}
+            className={`bg-gray-800 rounded-lg p-6 ${
+              !msg.read ? 'border-l-4 border-indigo-500' : ''
+            }`}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white">{msg.name}</h3>
+                <a
+                  href={`mailto:${msg.email}`}
+                  className="text-indigo-400 hover:text-indigo-300"
+                >
+                  {msg.email}
+                </a>
+              </div>
+              <div className="text-right">
+                <span className="text-gray-400 text-sm">
+                  {format(new Date(msg.createdAt), 'MMM d, yyyy h:mm a')}
+                </span>
+                {!msg.read && (
+                  <button
+                    onClick={() => markAsRead(msg._id)}
+                    className="ml-4 text-sm bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700"
+                  >
+                    Mark as Read
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-gray-300 whitespace-pre-wrap">{msg.message}</p>
+          </div>
+        ))}
+        
+        {messages.length === 0 && (
+          <div className="text-center text-gray-400 py-8">
+            No messages yet
           </div>
         )}
       </div>
-
-      {messages.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-400 text-lg">No messages yet</p>
-        </div>
-      ) : (
-        <div className="grid gap-6">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`p-6 rounded-lg shadow-lg transition-all duration-200 transform hover:scale-[1.02] ${
-                message.read ? 'bg-gray-800' : 'bg-gray-900 border-l-4 border-blue-500'
-              }`}
-            >
-              <div className="flex flex-col md:flex-row justify-between md:items-center mb-4">
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-xl text-white">{message.name}</h3>
-                  <a 
-                    href={`mailto:${message.email}`} 
-                    className="text-blue-400 hover:text-blue-300 transition-colors"
-                  >
-                    {message.email}
-                  </a>
-                </div>
-                <div className="text-sm text-gray-400 mt-2 md:mt-0">
-                  {format(new Date(message.created_at), 'PPpp')}
-                </div>
-              </div>
-              
-              <div className="mt-4">
-                <p className="text-gray-300 whitespace-pre-wrap">{message.message}</p>
-              </div>
-
-              {!message.read && (
-                <div className="mt-6">
-                  <button
-                    onClick={() => markAsRead(message.id)}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
-                  >
-                    <svg 
-                      className="w-5 h-5" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M5 13l4 4L19 7" 
-                      />
-                    </svg>
-                    <span>Mark as read</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
