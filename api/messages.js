@@ -34,20 +34,28 @@ const handler = async (req, res) => {
       return res.status(400).json({ message: 'Invalid email format' });
     }
 
-    // Prepare and execute the insert statement
-    const stmt = db.prepare('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)');
-    const result = stmt.run(name, email, message);
+    try {
+      // Prepare and execute the insert statement
+      const stmt = db.prepare('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)');
+      const result = stmt.run(name, email, message);
 
-    res.status(200).json({ 
-      success: true,
-      message: 'Message sent successfully', 
-      id: result.lastInsertRowid 
-    });
+      res.status(200).json({ 
+        success: true,
+        message: 'Message sent successfully',
+        id: result.lastInsertRowid
+      });
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to save message to database'
+      });
+    }
   } catch (error) {
-    console.error('Error processing message:', error);
+    console.error('Error processing request:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to send message. Please try again later.' 
+      message: 'Internal server error'
     });
   }
 };
