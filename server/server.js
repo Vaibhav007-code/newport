@@ -9,11 +9,26 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
+// Get allowed origins from environment variable or use default ones
+const getAllowedOrigins = () => {
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'https://*.vercel.app',
+    'https://*.render.com',
+    'https://*.now.sh'
+  ];
+  
+  if (process.env.ALLOWED_ORIGINS) {
+    return [...defaultOrigins, ...process.env.ALLOWED_ORIGINS.split(',')];
+  }
+  return defaultOrigins;
+};
+
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production'
-      ? ['https://*.vercel.app', 'https://*.now.sh']
+      ? getAllowedOrigins()
       : '*',
     methods: ['GET', 'POST'],
     credentials: true
@@ -24,7 +39,7 @@ const io = new Server(server, {
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://*.vercel.app', 'https://*.now.sh']
+    ? getAllowedOrigins()
     : '*',
   credentials: true
 }));
@@ -93,10 +108,14 @@ app.put('/api/messages/:id', (req, res) => {
 app.get('/api/admin/messages', async (req, res) => {
   try {
     const messages = await queries.getAllMessages();
+    if (!messages) {
+      return res.status(404).json({ error: 'No messages found' });
+    }
+    console.log('Fetched messages:', messages); // Debug log
     res.json(messages);
   } catch (error) {
     console.error('Error fetching messages:', error);
-    res.status(500).json({ error: 'Failed to fetch messages' });
+    res.status(500).json({ error: 'Failed to fetch messages', details: error.message });
   }
 });
 
