@@ -17,20 +17,29 @@ const AdminPanel: React.FC = () => {
   const fetchMessages = async () => {
     try {
       setError(null);
+      console.log('Fetching messages...');
       const response = await fetch('/api/admin/messages');
+      console.log('Response status:', response.status);
+      
       const data = await response.json();
+      console.log('Response data:', data);
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch messages');
+        throw new Error(data.error || data.details || 'Failed to fetch messages');
+      }
+      
+      if (!Array.isArray(data)) {
+        console.error('Invalid data format:', data);
+        throw new Error('Invalid response format from server');
       }
       
       setMessages(data);
-      console.log('Messages fetched:', data); // Debug log
+      console.log('Messages updated:', data);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load messages';
+      console.error('Error in fetchMessages:', error);
       setError(errorMessage);
       toast.error(errorMessage);
-      console.error('Error fetching messages:', error);
     } finally {
       setLoading(false);
     }
