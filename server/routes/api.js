@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { queries } = require('../db');
+const auth = require('../auth');
 
-// Message routes
+// Public routes
 router.post('/messages', async (req, res) => {
   try {
     const { name, email, message } = req.body;
@@ -41,7 +42,24 @@ router.post('/messages', async (req, res) => {
 });
 
 // Admin routes
-router.get('/admin/messages', async (req, res) => {
+router.post('/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    const token = await auth.login(username, password);
+    res.json({ token });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(401).json({ error: 'Invalid credentials' });
+  }
+});
+
+// Protected admin routes
+router.get('/admin/messages', auth.verifyToken, async (req, res) => {
   console.log('Admin messages request received');
   try {
     console.log('Attempting to fetch messages from database...');

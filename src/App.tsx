@@ -9,6 +9,8 @@ import About from './components/About';
 import Projects from './components/Projects';
 import Contact from './components/Contact';
 import Admin from './components/Admin';
+import AdminLogin from './components/AdminLogin';
+import AdminPanel from './components/AdminPanel';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -81,6 +83,8 @@ function App() {
                 </main>
               } />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/messages" element={<AdminPanel />} />
             </Routes>
             <footer className="text-center py-6 text-gray-400">
               <p> {new Date().getFullYear()} • Designed & Built by <span className="text-[#2eaadc]">Vaibhav</span></p>

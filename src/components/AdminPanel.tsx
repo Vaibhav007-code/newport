@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 
 interface Message {
@@ -13,11 +14,11 @@ const AdminPanel: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Get the base URL for API calls
   const getApiUrl = () => {
     if (process.env.NODE_ENV === 'production') {
-      // Use the same host as the current page in production
       return '';
     }
     return 'http://localhost:10000';
@@ -27,18 +28,32 @@ const AdminPanel: React.FC = () => {
     try {
       setError(null);
       console.log('Fetching messages...');
+
+      // Get the token from localStorage
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/api/admin/messages`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         credentials: 'include'
       });
       
       console.log('Response status:', response.status);
       
+      if (response.status === 401) {
+        localStorage.removeItem('adminToken');
+        navigate('/admin/login');
+        return;
+      }
+
       const data = await response.json();
       console.log('Response data:', data);
       
@@ -56,6 +71,12 @@ const AdminPanel: React.FC = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load messages';
       console.error('Error in fetchMessages:', error);
+      
+      if (errorMessage === 'Not authenticated') {
+        navigate('/admin/login');
+        return;
+      }
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -63,12 +84,24 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    navigate('/admin/login');
+    toast.success('Logged out successfully');
+  };
+
   useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      navigate('/admin/login');
+      return;
+    }
+
     fetchMessages();
     // Auto-refresh messages every 30 seconds
     const interval = setInterval(fetchMessages, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -78,32 +111,32 @@ const AdminPanel: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="text-red-500 mb-4">{error}</div>
-        <button
-          onClick={fetchMessages}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Panel - Messages</h1>
-        <button
-          onClick={fetchMessages}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-        >
-          Refresh
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={fetchMessages}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Refresh
+          </button>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+          >
+            Logout
+          </button>
+        </div>
       </div>
       
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+
       <div className="grid gap-4">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 py-8">No messages yet</div>
