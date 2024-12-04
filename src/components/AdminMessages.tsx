@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
 interface Message {
@@ -36,7 +36,7 @@ const AdminMessages: React.FC = () => {
 
     newSocket.on('newMessage', (message: Message) => {
       setMessages(prev => [message, ...prev]);
-      toast.info(`New message from ${message.name}`);
+      toast(`New message from ${message.name}`);
     });
 
     setSocket(newSocket);
