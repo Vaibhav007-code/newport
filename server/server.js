@@ -2,9 +2,8 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const { db, queries } = require('./db');
-require('dotenv').config();
 const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
@@ -12,10 +11,9 @@ const server = http.createServer(app);
 // Get allowed origins from environment variable or use default ones
 const getAllowedOrigins = () => {
   if (process.env.NODE_ENV === 'production') {
-    // In production, allow the request origin
-    return true; // This will reflect the request origin
+    return true; // Allow request origin in production
   }
-  return 'http://localhost:3000'; // In development, only allow localhost
+  return ['http://localhost:3000']; // In development, only allow localhost
 };
 
 // CORS configuration
@@ -29,9 +27,11 @@ const corsOptions = {
 
 // Socket.IO setup
 const io = new Server(server, {
-  cors: corsOptions,
-  path: '/socket.io/'
+  cors: corsOptions
 });
+
+// Store io instance on app for use in routes
+app.set('io', io);
 
 // Apply CORS middleware
 app.use(cors(corsOptions));
@@ -40,9 +40,8 @@ app.use(express.json());
 // Debug middleware
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`, {
-    origin: req.headers.origin,
-    host: req.headers.host,
-    referer: req.headers.referer
+    headers: req.headers,
+    body: req.body
   });
   next();
 });
@@ -51,7 +50,7 @@ app.use((req, res, next) => {
 app.use('/api', require('./routes/api'));
 
 // Serve static files from the React build directory
-app.use(express.static(path.join(__dirname, 'build')));
+app.use(express.static(path.join(__dirname, '..', 'build')));
 
 // Handle React routing, return all requests to React app
 app.get('*', (req, res, next) => {
@@ -59,7 +58,7 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return next();
   }
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'build', 'index.html'));
 });
 
 // Error handling middleware
@@ -71,18 +70,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-  
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
-
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
-  console.log('Static files served from:', path.join(__dirname, 'build'));
+  console.log('Static files served from:', path.join(__dirname, '..', 'build'));
 });

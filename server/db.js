@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure data directory exists
-const dataDir = path.join(__dirname, '../data');
+const dataDir = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -11,45 +11,40 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'messages.db');
 console.log('Database path:', dbPath);
 
-// Initialize database
-const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+// Create database connection
+const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error('Error opening database:', err);
-    process.exit(1); // Exit if we can't open the database
-  } else {
-    console.log('Connected to SQLite database');
-    createTables();
+    console.error('Error connecting to database:', err);
+    process.exit(1);
   }
+  console.log('Connected to database');
 });
 
-function createTables() {
-  const createTableSQL = `
+// Create messages table if it doesn't exist
+db.serialize(() => {
+  db.run(`
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       email TEXT NOT NULL,
       message TEXT NOT NULL,
-      read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
-  `;
-  
-  db.run(createTableSQL, (err) => {
+  `, (err) => {
     if (err) {
       console.error('Error creating messages table:', err);
       process.exit(1);
-    } else {
-      console.log('Messages table ready');
     }
+    console.log('Messages table ready');
   });
-}
+});
 
-// Database queries with proper error handling
 const queries = {
+  // Insert a new message
   insertMessage: (name, email, message) => {
     return new Promise((resolve, reject) => {
-      const sql = 'INSERT INTO messages (name, email, message) VALUES (?, ?, ?)';
-      db.run(sql, [name, email, message], function(err) {
+      const query = 'INSERT INTO messages (name, email, message) VALUES (?, ?, ?)';
+      db.run(query, [name, email, message], function(err) {
         if (err) {
           console.error('Error inserting message:', err);
           reject(err);
@@ -61,65 +56,51 @@ const queries = {
     });
   },
 
+  // Get a specific message by ID
   getMessage: (id) => {
     return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM messages WHERE id = ?';
-      db.get(sql, [id], (err, row) => {
+      const query = 'SELECT * FROM messages WHERE id = ?';
+      db.get(query, [id], (err, row) => {
         if (err) {
           console.error('Error getting message:', err);
           reject(err);
         } else {
-          console.log('Retrieved message:', row);
           resolve(row);
         }
       });
     });
   },
 
+  // Get all messages
   getAllMessages: () => {
     return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM messages ORDER BY created_at DESC';
-      db.all(sql, [], (err, rows) => {
+      const query = 'SELECT * FROM messages ORDER BY created_at DESC';
+      db.all(query, [], (err, rows) => {
         if (err) {
           console.error('Error getting all messages:', err);
           reject(err);
         } else {
-          console.log(`Retrieved ${rows ? rows.length : 0} messages`);
+          console.log(`Retrieved ${rows?.length || 0} messages`);
           resolve(rows || []);
-        }
-      });
-    });
-  },
-
-  markAsRead: (id) => {
-    return new Promise((resolve, reject) => {
-      const sql = 'UPDATE messages SET read = 1 WHERE id = ?';
-      db.run(sql, [id], (err) => {
-        if (err) {
-          console.error('Error marking message as read:', err);
-          reject(err);
-        } else {
-          console.log('Message marked as read:', id);
-          resolve();
         }
       });
     });
   }
 };
 
-// Handle database errors
-db.on('error', (err) => {
-  console.error('Database error:', err);
-});
-
-process.on('exit', () => {
+// Handle process termination
+process.on('SIGINT', () => {
   db.close((err) => {
     if (err) {
       console.error('Error closing database:', err);
-    } else {
-      console.log('Database connection closed');
+      process.exit(1);
     }
+    console.log('Database connection closed');
+    process.exit(0);
   });
 });
 
-module.exports = { db, queries };
+module.exports = {
+  db,
+  queries
+};

@@ -27,15 +27,16 @@ const AdminPanel: React.FC = () => {
   const fetchMessages = async () => {
     try {
       setError(null);
-      console.log('Fetching messages...');
-
-      // Get the token from localStorage
       const token = localStorage.getItem('adminToken');
+      
       if (!token) {
-        throw new Error('Not authenticated');
+        navigate('/admin/login');
+        return;
       }
 
       const apiUrl = getApiUrl();
+      console.log('Fetching messages from:', `${apiUrl}/api/admin/messages`);
+      
       const response = await fetch(`${apiUrl}/api/admin/messages`, {
         method: 'GET',
         headers: {
@@ -67,16 +68,11 @@ const AdminPanel: React.FC = () => {
       }
       
       setMessages(data);
+      setError(null);
       console.log('Messages updated:', data);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load messages';
       console.error('Error in fetchMessages:', error);
-      
-      if (errorMessage === 'Not authenticated') {
-        navigate('/admin/login');
-        return;
-      }
-
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -132,8 +128,14 @@ const AdminPanel: React.FC = () => {
       </div>
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
+          <span>{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-700 hover:text-red-900"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -142,7 +144,7 @@ const AdminPanel: React.FC = () => {
           <div className="text-center text-gray-500 py-8">No messages yet</div>
         ) : (
           messages.map((message) => (
-            <div key={message.id} className="bg-white p-4 rounded-lg shadow">
+            <div key={message.id} className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold">{message.name}</h3>
                 <span className="text-sm text-gray-500">
@@ -150,7 +152,7 @@ const AdminPanel: React.FC = () => {
                 </span>
               </div>
               <p className="text-sm text-gray-600 mb-2">{message.email}</p>
-              <p className="text-gray-800">{message.message}</p>
+              <p className="text-gray-800 whitespace-pre-wrap">{message.message}</p>
             </div>
           ))
         )}
