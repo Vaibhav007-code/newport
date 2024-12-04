@@ -37,7 +37,7 @@ app.use((req, res, next) => {
 });
 
 // Message routes
-app.post('/api/messages', (req, res) => {
+app.post('/api/messages', async (req, res) => {
   try {
     const { name, email, message } = req.body;
     
@@ -47,22 +47,16 @@ app.post('/api/messages', (req, res) => {
     }
     
     // Insert message into database
-    const result = queries.insertMessage.run(name, email, message);
-    const newMessage = queries.getMessage.get(result.lastInsertRowid);
+    const messageId = await queries.insertMessage(name, email, message);
+    const newMessage = await queries.getMessage(messageId);
     
-    // Emit new message to all connected clients
-    io.emit('newMessage', newMessage);
+    // Emit the new message to all connected clients
+    io.emit('new-message', newMessage);
     
-    res.status(201).json({ 
-      message: 'Message sent successfully',
-      data: newMessage
-    });
+    res.status(201).json(newMessage);
   } catch (error) {
     console.error('Error saving message:', error);
-    res.status(500).json({ 
-      error: 'Failed to save message',
-      details: error.message 
-    });
+    res.status(500).json({ error: 'Failed to save message' });
   }
 });
 
@@ -96,9 +90,9 @@ app.put('/api/messages/:id', (req, res) => {
 });
 
 // Admin routes
-app.get('/api/admin/messages', (req, res) => {
+app.get('/api/admin/messages', async (req, res) => {
   try {
-    const messages = queries.getAllMessages.all();
+    const messages = await queries.getAllMessages();
     res.json(messages);
   } catch (error) {
     console.error('Error fetching messages:', error);

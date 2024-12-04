@@ -1,6 +1,5 @@
-const Database = require('better-sqlite3');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const fs = require('fs');
 
 // Determine database path based on environment
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -10,57 +9,86 @@ const dbPath = isDevelopment
 
 // Ensure directory exists
 const dbDir = path.dirname(dbPath);
+const fs = require('fs');
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-// Initialize database
-let db;
-try {
-  db = new Database(dbPath, { verbose: console.log });
-  console.log('SQLite Database connected at:', dbPath);
-  
-  // Create messages table if it doesn't exist
-  db.exec(`
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Error opening database:', err);
+  } else {
+    console.log('Connected to SQLite database');
+    createTables();
+  }
+});
+
+function createTables() {
+  db.run(`
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       email TEXT NOT NULL,
       message TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      read BOOLEAN DEFAULT 0
+      read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-} catch (error) {
-  console.error('Database initialization error:', error);
-  // Fallback to in-memory database if file system is not writable
-  if (error.code === 'SQLITE_CANTOPEN') {
-    console.log('Falling back to in-memory database');
-    db = new Database(':memory:', { verbose: console.log });
-    db.exec(`
-      CREATE TABLE messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        message TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        read BOOLEAN DEFAULT 0
-      )
-    `);
-  } else {
-    throw error;
-  }
 }
 
-// Prepare common queries
+// Database queries
 const queries = {
-  insertMessage: db.prepare('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)'),
-  getAllMessages: db.prepare(`
-    SELECT * FROM messages 
-    ORDER BY created_at DESC
-  `),
-  markAsRead: db.prepare('UPDATE messages SET read = 1 WHERE id = ?'),
-  getMessage: db.prepare('SELECT * FROM messages WHERE id = ?')
+  insertMessage: (name, email, message) => {
+    return new Promise((resolve, reject) => {
+      db.run(
+        'INSERT INTO messages (name, email, message) VALUES (?, ?, ?)',
+        [name, email, message],
+        function(err) {
+          if (err) reject(err);
+          else resolve(this.lastID);
+        }
+      );
+    });
+  },
+
+  getMessage: (id) => {
+    return new Promise((resolve, reject) => {
+      db.get(
+        'SELECT * FROM messages WHERE id = ?',
+        [id],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+  },
+
+  getAllMessages: () => {
+    return new Promise((resolve, reject) => {
+      db.all(
+        'SELECT * FROM messages ORDER BY created_at DESC',
+        [],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        }
+      );
+    });
+  },
+
+  markAsRead: (id) => {
+    return new Promise((resolve, reject) => {
+      db.run(
+        'UPDATE messages SET read = 1 WHERE id = ?',
+        [id],
+        (err) => {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+  }
 };
 
 module.exports = { db, queries };
