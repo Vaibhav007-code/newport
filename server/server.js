@@ -2,48 +2,14 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const mongoose = require('mongoose');
-const Message = require('../api/models/Message');
+const { db, queries } = require('./db');
 require('dotenv').config();
 const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 
-// Connect to MongoDB with error handling
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/portfolio', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log('Successfully connected to MongoDB');
-})
-.catch((err) => {
-  console.error('MongoDB connection error:', err);
-});
-
-// Handle MongoDB connection errors
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  try {
-    await mongoose.connection.close();
-    console.log('MongoDB connection closed through app termination');
-    process.exit(0);
-  } catch (err) {
-    console.error('Error during MongoDB shutdown:', err);
-    process.exit(1);
-  }
-});
-
-// Socket.IO setup with proper CORS
+// Socket.IO setup
 const io = new Server(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production'
@@ -52,10 +18,7 @@ const io = new Server(server, {
     methods: ['GET', 'POST'],
     credentials: true
   },
-  path: '/socket.io/',
-  transports: ['websocket', 'polling'],
-  pingTimeout: 60000,
-  pingInterval: 25000
+  path: '/socket.io/'
 });
 
 // Middleware
@@ -74,38 +37,25 @@ app.use((req, res, next) => {
 });
 
 // Message routes
-app.post('/api/messages', async (req, res) => {
-  console.log('Received message request:', req.body);
-  
+app.post('/api/messages', (req, res) => {
   try {
     const { name, email, message } = req.body;
     
     // Validate input
     if (!name || !email || !message) {
-      console.log('Validation failed:', { name, email, message });
       return res.status(400).json({ error: 'All fields are required' });
     }
     
-    // Create new message
-    const newMessage = new Message({
-      name,
-      email,
-      message,
-      read: false
-    });
-
-    console.log('Saving message:', newMessage);
-
-    // Save message to MongoDB
-    const savedMessage = await newMessage.save();
-    console.log('Message saved successfully:', savedMessage);
+    // Insert message into database
+    const result = queries.insertMessage.run(name, email, message);
+    const newMessage = queries.getMessage.get(result.lastInsertRowid);
     
-    // Emit the new message to all connected clients
-    io.emit('newMessage', savedMessage);
+    // Emit new message to all connected clients
+    io.emit('newMessage', newMessage);
     
     res.status(201).json({ 
       message: 'Message sent successfully',
-      data: savedMessage 
+      data: newMessage
     });
   } catch (error) {
     console.error('Error saving message:', error);
@@ -117,11 +67,9 @@ app.post('/api/messages', async (req, res) => {
 });
 
 // Get all messages
-app.get('/api/messages', async (req, res) => {
-  console.log('Fetching messages');
+app.get('/api/messages', (req, res) => {
   try {
-    const messages = await Message.find().sort({ createdAt: -1 });
-    console.log(`Found ${messages.length} messages`);
+    const messages = queries.getAllMessages.all();
     res.json(messages);
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -130,24 +78,37 @@ app.get('/api/messages', async (req, res) => {
 });
 
 // Mark message as read
-app.put('/api/messages/:id', async (req, res) => {
-  console.log('Marking message as read:', req.params.id);
+app.put('/api/messages/:id', (req, res) => {
   try {
-    const message = await Message.findByIdAndUpdate(
-      req.params.id,
-      { read: true },
-      { new: true }
-    );
+    const { id } = req.params;
+    queries.markAsRead.run(id);
+    const message = queries.getMessage.get(id);
+    
     if (!message) {
-      console.log('Message not found:', req.params.id);
       return res.status(404).json({ error: 'Message not found' });
     }
-    console.log('Message marked as read:', message);
+    
     res.json(message);
   } catch (error) {
     console.error('Error updating message:', error);
     res.status(500).json({ error: 'Failed to update message' });
   }
+});
+
+// Admin routes
+app.get('/api/admin/messages', (req, res) => {
+  try {
+    const messages = queries.getAllMessages.all();
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// Health check endpoint for Render
+app.get('/api/health', (req, res) => {
+  res.status(200).send('OK');
 });
 
 // Socket.IO connection handling

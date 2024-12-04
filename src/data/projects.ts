@@ -16,26 +16,26 @@ export interface Project {
 export const projects: Project[] = [
   {
     id: 1,
-    title: "AI-Powered Task Manager",
-    description: "A smart task management application that uses AI to prioritize and categorize tasks automatically.",
-    image: "/images/projects/task-manager.jpg",
-    tags: ["React", "TypeScript", "OpenAI", "TailwindCSS"],
+    title: "Group Study Site",
+    description: "A collaborative platform for group study and learning.",
+    image: "https://i.ibb.co/dWCQqLX/Screenshot-2024-12-03-224528.png",
+    tags: ["React", "Node.js", "MongoDB", "Express"],
     category: "personal",
     links: {
-      github: "https://github.com/yourusername/task-manager",
-      live: "https://task-manager-demo.com"
+      github: "https://github.com/yourusername/group-study",
+      live: "https://group-study-demo.com"
     }
   },
   {
     id: 2,
-    title: "E-commerce Platform",
-    description: "A full-featured e-commerce platform with real-time inventory management and payment processing.",
-    image: "/images/projects/ecommerce.jpg",
-    tags: ["Next.js", "MongoDB", "Stripe", "Redux"],
-    category: "freelance",
+    title: "Note Taking App",
+    description: "A comprehensive note-taking application with rich text editing features.",
+    image: "https://i.ibb.co/N2g3zNz/Screenshot-2024-12-03-224406.png",
+    tags: ["React", "TypeScript", "Node.js", "MongoDB"],
+    category: "personal",
     links: {
-      github: "https://github.com/yourusername/ecommerce",
-      live: "https://ecommerce-demo.com"
+      github: "https://github.com/yourusername/note-taking-app",
+      live: "https://note-taking-demo.com"
     }
   },
   {

@@ -16,8 +16,11 @@
     "@types/socket.io-client": "^3.0.0",
     "@vercel/node": "^3.2.27",
     "autoprefixer": "^10.4.14",
-    "better-sqlite3": "^11.6.0",
+    "better-sqlite3": "^8.7.0",
+    "cors": "^2.8.5",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
     "framer-motion": "^10.18.0",
     "postcss": "^8.4.27",
     "react": "^18.2.0",
@@ -28,7 +31,7 @@
     "react-router-dom": "^7.0.2",
     "react-scripts": "5.0.1",
     "react-toastify": "^10.0.6",
-    "socket.io": "^4.8.1",
+    "socket.io": "^4.7.2",
     "socket.io-client": "^4.8.1",
     "sqlite3": "^5.1.7",
     "tailwindcss": "^3.3.3",
@@ -36,11 +39,11 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "node server/server.js",
     "build": "CI=false react-scripts build",
-    "vercel-build": "CI=false REACT_APP_API_URL=https://$VERCEL_URL npm run build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "dev": "nodemon server/server.js"
   },
   "eslintConfig": {
     "extends": [

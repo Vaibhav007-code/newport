@@ -1,39 +1,46 @@
 import React, { useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-toastify';
+
+interface FormData {
+  name: string;
+  email: string;
+  message: string;
+}
 
 const ContactForm: React.FC = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || '';
-      console.log('Sending message to:', `${apiUrl}/api/messages`);
-      console.log('Message data:', formData);
-
-      const response = await fetch(`${apiUrl}/api/messages`, {
+      const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData)
       });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Server response:', errorData);
-        throw new Error(`Server responded with ${response.status}: ${errorData}`);
-      }
+      const data = await response.json();
 
-      const responseData = await response.json();
-      console.log('Server response:', responseData);
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send message');
+      }
 
       toast.success('Message sent successfully!');
       setFormData({ name: '', email: '', message: '' });
@@ -43,11 +50,6 @@ const ContactForm: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   return (
