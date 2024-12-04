@@ -49,8 +49,15 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api', require('./routes/api'));
 
+// Determine the correct build path
+const buildPath = process.env.NODE_ENV === 'production'
+  ? path.join(process.cwd(), 'build')  // Production build path
+  : path.join(__dirname, '..', 'build'); // Development build path
+
+console.log('Build path:', buildPath);
+
 // Serve static files from the React build directory
-app.use(express.static(path.join(__dirname, '..', 'build')));
+app.use(express.static(buildPath));
 
 // Handle React routing, return all requests to React app
 app.get('*', (req, res, next) => {
@@ -58,7 +65,17 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return next();
   }
-  res.sendFile(path.join(__dirname, '..', 'build', 'index.html'));
+  
+  const indexPath = path.join(buildPath, 'index.html');
+  console.log('Serving index.html from:', indexPath);
+  
+  // Check if index.html exists
+  if (!require('fs').existsSync(indexPath)) {
+    console.error('index.html not found at:', indexPath);
+    return res.status(404).send('Build files not found. Please run npm run build first.');
+  }
+  
+  res.sendFile(indexPath);
 });
 
 // Error handling middleware
@@ -74,5 +91,5 @@ const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
-  console.log('Static files served from:', path.join(__dirname, '..', 'build'));
+  console.log('Static files served from:', buildPath);
 });

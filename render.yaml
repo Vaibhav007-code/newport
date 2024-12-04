@@ -2,19 +2,26 @@ services:
   - type: web
     name: portfolio
     env: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm run render-postbuild
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: "10000"
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
     buildFilter:
       paths:
       - src/**
       - server/**
       - package.json
       - package-lock.json
+      - render.yaml
     disk:
       name: data
       mountPath: /data
