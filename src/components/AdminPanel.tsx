@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 interface Message {
   id: number;
@@ -101,61 +101,65 @@ const AdminPanel: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-screen bg-background-light dark:bg-background-dark">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin Panel - Messages</h1>
-        <div className="flex gap-4">
-          <button
-            onClick={fetchMessages}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          >
-            Refresh
-          </button>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-          >
-            Logout
-          </button>
+    <div className="min-h-screen bg-background-light dark:bg-background-dark">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Admin Panel - Messages</h1>
+          <div className="flex flex-wrap gap-2 sm:gap-4 w-full sm:w-auto">
+            <button
+              onClick={fetchMessages}
+              className="flex-1 sm:flex-none px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors duration-200 text-sm sm:text-base"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex-1 sm:flex-none px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200 text-sm sm:text-base"
+            >
+              Logout
+            </button>
+          </div>
         </div>
-      </div>
-      
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
-          <span>{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="text-red-700 hover:text-red-900"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      <div className="grid gap-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">No messages yet</div>
-        ) : (
-          messages.map((message) => (
-            <div key={message.id} className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold">{message.name}</h3>
-                <span className="text-sm text-gray-500">
-                  {new Date(message.created_at).toLocaleString()}
-                </span>
-              </div>
-              <p className="text-sm text-gray-600 mb-2">{message.email}</p>
-              <p className="text-gray-800 whitespace-pre-wrap">{message.message}</p>
-            </div>
-          ))
+        
+        {error && (
+          <div className="bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg mb-4 flex justify-between items-center">
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-700 dark:text-red-200 hover:text-red-900 dark:hover:text-red-100"
+            >
+              ×
+            </button>
+          </div>
         )}
+
+        <div className="grid gap-4">
+          {messages.length === 0 ? (
+            <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-lg shadow">
+              No messages yet
+            </div>
+          ) : (
+            messages.map((message) => (
+              <div key={message.id} className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow hover:shadow-md transition-shadow">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{message.name}</h3>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {new Date(message.created_at).toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{message.email}</p>
+                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap text-sm sm:text-base">{message.message}</p>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
