@@ -110,35 +110,37 @@ const AdminPanel: React.FC = () => {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Admin Panel - Messages</h1>
-          <div className="flex flex-wrap gap-2 sm:gap-4 w-full sm:w-auto">
-            <button
-              onClick={fetchMessages}
-              className="flex-1 sm:flex-none px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors duration-200 text-sm sm:text-base"
-            >
-              Refresh
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex-1 sm:flex-none px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200 text-sm sm:text-base"
-            >
-              Logout
-            </button>
+        <div className="sticky top-0 z-10 bg-background-light dark:bg-background-dark pt-4 pb-6 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Admin Panel - Messages</h1>
+            <div className="flex gap-3 w-full sm:w-auto">
+              <button
+                onClick={fetchMessages}
+                className="flex-1 sm:flex-none min-w-[100px] px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors duration-200 text-sm sm:text-base"
+              >
+                Refresh
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 sm:flex-none min-w-[100px] px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200 text-sm sm:text-base"
+              >
+                Logout
+              </button>
+            </div>
           </div>
+          
+          {error && (
+            <div className="mt-4 bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg flex justify-between items-center">
+              <span>{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-700 dark:text-red-200 hover:text-red-900 dark:hover:text-red-100"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
-        
-        {error && (
-          <div className="bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg mb-4 flex justify-between items-center">
-            <span>{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="text-red-700 dark:text-red-200 hover:text-red-900 dark:hover:text-red-100"
-            >
-              ×
-            </button>
-          </div>
-        )}
 
         <div className="grid gap-4">
           {messages.length === 0 ? (
