@@ -14,11 +14,29 @@ const AdminPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Get the base URL for API calls
+  const getApiUrl = () => {
+    if (process.env.NODE_ENV === 'production') {
+      // Use the same host as the current page in production
+      return '';
+    }
+    return 'http://localhost:10000';
+  };
+
   const fetchMessages = async () => {
     try {
       setError(null);
       console.log('Fetching messages...');
-      const response = await fetch('/api/admin/messages');
+      const apiUrl = getApiUrl();
+      const response = await fetch(`${apiUrl}/api/admin/messages`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      
       console.log('Response status:', response.status);
       
       const data = await response.json();

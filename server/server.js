@@ -11,142 +11,64 @@ const server = http.createServer(app);
 
 // Get allowed origins from environment variable or use default ones
 const getAllowedOrigins = () => {
-  const defaultOrigins = [
-    'http://localhost:3000',
-    'https://*.vercel.app',
-    'https://*.render.com',
-    'https://*.now.sh'
-  ];
-  
-  if (process.env.ALLOWED_ORIGINS) {
-    return [...defaultOrigins, ...process.env.ALLOWED_ORIGINS.split(',')];
+  if (process.env.NODE_ENV === 'production') {
+    // In production, allow the request origin
+    return true; // This will reflect the request origin
   }
-  return defaultOrigins;
+  return 'http://localhost:3000'; // In development, only allow localhost
+};
+
+// CORS configuration
+const corsOptions = {
+  origin: getAllowedOrigins(),
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
 };
 
 // Socket.IO setup
 const io = new Server(server, {
-  cors: {
-    origin: process.env.NODE_ENV === 'production'
-      ? getAllowedOrigins()
-      : '*',
-    methods: ['GET', 'POST'],
-    credentials: true
-  },
+  cors: corsOptions,
   path: '/socket.io/'
 });
 
-// Middleware
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? getAllowedOrigins()
-    : '*',
-  credentials: true
-}));
+// Apply CORS middleware
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Debug middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`, req.body);
+  console.log(`${req.method} ${req.path}`, {
+    origin: req.headers.origin,
+    host: req.headers.host,
+    referer: req.headers.referer
+  });
   next();
 });
 
-// Message routes
-app.post('/api/messages', async (req, res) => {
-  try {
-    const { name, email, message } = req.body;
-    console.log('Received message:', { name, email, message }); // Debug log
-    
-    // Validate input
-    if (!name || !email || !message) {
-      console.log('Validation failed: Missing fields');
-      return res.status(400).json({ error: 'All fields are required' });
-    }
-    
-    // Insert message into database
-    console.log('Attempting to save message to database...');
-    const messageId = await queries.insertMessage(name, email, message);
-    console.log('Message saved with ID:', messageId);
-    
-    const newMessage = await queries.getMessage(messageId);
-    console.log('Retrieved saved message:', newMessage);
-    
-    // Emit the new message to all connected clients
-    io.emit('new-message', newMessage);
-    
-    res.status(201).json({
-      success: true,
-      message: 'Message sent successfully',
-      data: newMessage
-    });
-  } catch (error) {
-    console.error('Error saving message:', error);
-    res.status(500).json({ error: 'Failed to save message', details: error.message });
+// API Routes
+app.use('/api', require('./routes/api'));
+
+// Serve static files from the React build directory
+app.use(express.static(path.join(__dirname, 'build')));
+
+// Handle React routing, return all requests to React app
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
   }
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
-// Get all messages
-app.get('/api/messages', (req, res) => {
-  try {
-    const messages = queries.getAllMessages.all();
-    res.json(messages);
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    res.status(500).json({ error: 'Failed to fetch messages' });
-  }
-});
-
-// Mark message as read
-app.put('/api/messages/:id', (req, res) => {
-  try {
-    const { id } = req.params;
-    queries.markAsRead.run(id);
-    const message = queries.getMessage.get(id);
-    
-    if (!message) {
-      return res.status(404).json({ error: 'Message not found' });
-    }
-    
-    res.json(message);
-  } catch (error) {
-    console.error('Error updating message:', error);
-    res.status(500).json({ error: 'Failed to update message' });
-  }
-});
-
-// Admin routes
-app.get('/api/admin/messages', async (req, res) => {
-  console.log('Admin messages request received');
-  try {
-    console.log('Attempting to fetch messages from database...');
-    const messages = await queries.getAllMessages();
-    console.log('Messages fetched:', messages);
-    
-    if (!messages) {
-      console.log('No messages found in database');
-      return res.status(404).json({ error: 'No messages found' });
-    }
-    
-    if (!Array.isArray(messages)) {
-      console.log('Invalid messages format:', messages);
-      return res.status(500).json({ error: 'Invalid messages format' });
-    }
-    
-    console.log(`Successfully fetched ${messages.length} messages`);
-    res.json(messages);
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch messages', 
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
-});
-
-// Health check endpoint for Render
-app.get('/api/health', (req, res) => {
-  res.status(200).send('OK');
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 // Socket.IO connection handling
@@ -158,15 +80,9 @@ io.on('connection', (socket) => {
   });
 });
 
-// Serve static files from the React build directory
-app.use(express.static(path.join(__dirname, 'build')));
-
-// Handle React routing, return all requests to React app
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
-
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Static files served from:', path.join(__dirname, 'build'));
 });
