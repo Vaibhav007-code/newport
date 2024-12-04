@@ -40,7 +40,8 @@
   },
   "scripts": {
     "start": "node server/server.js",
-    "build": "CI=false react-scripts build",
+    "build": "react-scripts build",
+    "postbuild": "mv build server/",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "dev": "nodemon server/server.js"

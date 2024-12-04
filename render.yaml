@@ -7,6 +7,15 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATABASE_URL
-        sync: false
-    healthCheckPath: /api/health
+      - key: PORT
+        value: "10000"
+    buildFilter:
+      paths:
+      - src/**
+      - server/**
+      - package.json
+      - package-lock.json
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1

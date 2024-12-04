@@ -10,9 +10,11 @@
 
 # production
 /build
+/server/build
 
 # misc
 .DS_Store
+.env
 .env.local
 .env.development.local
 .env.test.local
@@ -22,12 +24,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# SQLite database files
-*.db
+# database
 *.sqlite
 *.sqlite3
-
-# Vercel
-.vercel
-
-.vercel
+/data
