@@ -11,8 +11,7 @@ import Contact from './components/Contact';
 import Admin from './components/Admin';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { Toaster } from 'react-hot-toast';
 
 const LoadingScreen = () => {
   return (
@@ -50,17 +49,29 @@ function App() {
       <ErrorBoundary>
         <ThemeProvider>
           <Admin />
-          <ToastContainer
+          <Toaster
             position="bottom-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="dark"
+            toastOptions={{
+              duration: 5000,
+              style: {
+                background: '#333',
+                color: '#fff',
+              },
+              success: {
+                duration: 3000,
+                iconTheme: {
+                  primary: '#4ade80',
+                  secondary: '#fff',
+                },
+              },
+              error: {
+                duration: 3000,
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#fff',
+                },
+              },
+            }}
           />
         </ThemeProvider>
       </ErrorBoundary>
@@ -72,6 +83,30 @@ function App() {
       <ErrorBoundary>
         <ThemeProvider>
           <div className="min-h-screen bg-background-light dark:bg-background-dark transition-colors duration-300">
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                duration: 5000,
+                style: {
+                  background: '#333',
+                  color: '#fff',
+                },
+                success: {
+                  duration: 3000,
+                  iconTheme: {
+                    primary: '#4ade80',
+                    secondary: '#fff',
+                  },
+                },
+                error: {
+                  duration: 3000,
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#fff',
+                  },
+                },
+              }}
+            />
             <Navbar />
             <Routes>
               <Route path="/" element={
@@ -89,18 +124,6 @@ function App() {
             <footer className="text-center py-6 text-gray-400">
               <p> {new Date().getFullYear()} • Designed & Built by <span className="text-[#2eaadc]">Vaibhav</span></p>
             </footer>
-            <ToastContainer
-              position="bottom-right"
-              autoClose={5000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="dark"
-            />
           </div>
         </ThemeProvider>
       </ErrorBoundary>
